@@ -1,4 +1,4 @@
-import { BtnMyLocation, Logo, MapView } from "../components"
+import { BtnMyLocation, Logo, MapView, SearchBar } from "../components"
 
 
 
@@ -8,6 +8,7 @@ export const HomePage = () => {
     <MapView></MapView>
     <BtnMyLocation></BtnMyLocation>
     <Logo></Logo>
+    <SearchBar></SearchBar>
     </>
     
   )

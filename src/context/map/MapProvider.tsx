@@ -1,10 +1,15 @@
+/* eslint import/no-webpack-loader-syntax:off */
 import { useReducer, useContext, useEffect } from 'react';
 
-import { Map, Marker, Popup } from "mapbox-gl";
+//@ts-ignore
+import { AnySourceData, LngLatBounds, Map, Marker, Popup } from "!mapbox-gl";
 
 import { MapContext } from "./MapContext";
 import { mapReducer } from "./mapReducer";
 import { PlacesContext } from '../';
+import { directionsAPI } from './../../api';
+import { ResponseDirections } from '../../interfaces/responseMapBox';
+
 
 export interface MapState {
   isMapReady: boolean;
@@ -39,7 +44,7 @@ export const MapProvider = ({ children }: Props) => {
         .setPopup(popup)
         .addTo(state.map!);
     })
-    dispatch({type:'setMarkers',payload:newMarkers})
+    dispatch({ type: 'setMarkers', payload: newMarkers })
     //Limpiar las polilynes
 
   }, [places])
@@ -53,13 +58,72 @@ export const MapProvider = ({ children }: Props) => {
       .setLngLat(map.getCenter())
       .setPopup(myLocationPopUp)
       .addTo(map);
-
-
     dispatch({ type: 'setMap', payload: map })
+  }
+
+  const getRouteBetwenPoints = async (start: [number, number], end: [number, number]) => {
+    const respuesta = await directionsAPI.get<ResponseDirections>(`/${start.join(',')};${end.join(',')} `);
+    let { distance, geometry } = respuesta.data.routes[0];
+    const { coordinates: coords } = geometry
+    // let kms = distance / 1000;
+    // kms = Math.round(kms * 100);
+    // kms /= 100;
+    //const minutes = Math.floor(duration / 60);
+
+    const bounds = new LngLatBounds(start, start)
+    for (const coord of coords) {
+      const newCoord: [number, number] = [coord[0], coord[1]];
+      bounds.extend(newCoord);
+    }
+    state.map?.fitBounds(bounds, { padding: 200 })
+
+    const sourceData: AnySourceData = {
+      type: 'geojson',
+      data: {
+        type: "FeatureCollection",
+        features: [
+          {
+            type: "Feature",
+            properties: {},
+            geometry: {
+              type: 'LineString',
+              coordinates: coords
+            }
+
+          }
+        ]
+      }
+    }
+
+    if (state.map?.getLayer('RouteString')) {
+      state.map?.removeLayer('RouteString');
+      state.map?.removeSource('RouteString');
+      
+    }
+    //state.map?.removeSource('RouteString');
+    state.map?.addSource('RouteString', sourceData)
+    state.map?.addLayer({
+      id: 'RouteString',
+      type: 'line',
+      source: 'RouteString',
+      layout: {
+        'line-join': 'round',
+        'line-cap': 'round',
+      },
+      paint: {
+        'line-color': 'white',
+        'line-width': 3
+      }
+    })
+
+    //console.log({ kms, minutes })
+    //console.log(respuesta.data);
+
 
   }
+
   return (
-    <MapContext.Provider value={{ ...state, setMap }} >
+    <MapContext.Provider value={{ ...state, setMap, getRouteBetwenPoints }} >
       {children}
     </MapContext.Provider>
   )

@@ -1,5 +1,5 @@
 import { createContext } from "react";
-import { ResponseSearch, Feature } from '../../interfaces/responseSearch';
+import {  Feature } from '../../interfaces/responseSearch';
 
 export interface PlacesContextProps {
   isLoading: boolean;
